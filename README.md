@@ -21,7 +21,7 @@ Hacé reels verticales con personajes 3D animados **conversando con Claude**: le
 
 ## Instalación (5 minutos)
 ```bash
-git clone <este-repo> estudio-reels && cd estudio-reels
+git clone https://github.com/mrusciano/estudio-reels.git && cd estudio-reels
 npm install
 python -m pip install -r requirements.txt
 cp .env.example .env        # y pegá tu ELEVENLABS_API_KEY
