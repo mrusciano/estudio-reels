@@ -11,7 +11,7 @@
   "description": "Estudio de reels 3D animados con código + voces IA, manejado por Claude Code",
   "scripts": {
     "check": "node tools/check.mjs",
-    "demo": "node tools/render.mjs demo video && python -I tools/mix.py demo",
+    "demo": "node tools/build.mjs demo && node tools/render.mjs demo video && python -I tools/mix.py demo",
     "nuevo": "node tools/nuevo.mjs"
   }
 }
