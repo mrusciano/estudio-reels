@@ -1,0 +1,29 @@
+{
+  "title": "Rulo",
+  "model": "eleven_v4",
+  "language": "es",
+  "stability": 0.45,
+  "tempo": 1.0,
+  "timing": "take",
+  "perfil": "tierno",
+  "set": "pieza",
+  "music": "piano",
+  "tail": 2.6,
+  "minShot": 1.2,
+  "nota": "Episodio de ejemplo del kit. Dinamica: ella AMA (la planta), Claude CALCULA, algo chiquito con nombre (Rulo). Decision temprana ('No quiero otro'), objecion honesta, nucleo corto ('Lo riego igual'), button: el que cambio (Claude) usa el nombre que antes no usaba.",
+  "voices": {
+    "claude": { "id": "vgekQLm3GYiKMHUnPVvY", "name": "Agus (AR)" },
+    "ella": { "id": "8Nz6hV5TPv151P6ZNEBV", "name": "Zeta (AR)" }
+  },
+  "lines": [
+    { "id": "c1", "who": "claude", "tags": "[curious]", "text": "Tres de la mañana. Le estás hablando a una planta." },
+    { "id": "e1", "who": "ella", "tags": "[sheepishly]", "text": "Se llama Rulo. Y se está muriendo." },
+    { "id": "c2", "who": "claude", "tags": "[matter-of-fact]", "text": "Le quedan dos hojas. Comprate otro: sale menos que un café." },
+    { "id": "e2", "who": "ella", "tags": "[sincere]", "gap": 0.8, "shot": "E_cu", "text": "No quiero otro." },
+    { "id": "c3", "who": "claude", "tags": "[hesitant]", "obj": true, "text": "¿Y si no vuelve?" },
+    { "id": "e3", "who": "ella", "tags": "[thoughtful]", "gap": 1.2, "climax": true, "text": "Lo riego igual." },
+    { "id": "c4", "who": "claude", "tags": "[deadpan]", "react": true, "text": "Eso no es botánica." },
+    { "id": "e4", "who": "ella", "tags": "[playful]", "text": "No. Es Rulo." },
+    { "id": "c5", "who": "claude", "tags": "[warmly]", "gap": 1.5, "coda": true, "shot": "flor", "text": "Buenas noches, Rulo." }
+  ]
+}

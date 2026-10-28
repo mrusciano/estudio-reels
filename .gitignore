@@ -1,0 +1,9 @@
+.env
+node_modules/
+episodes/*/frames/
+episodes/*/stills/
+episodes/*/out/
+episodes/*/voices/takes/
+episodes/*/voices/*.redo.mp3
+casting/
+entregas/
