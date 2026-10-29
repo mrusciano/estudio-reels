@@ -49,20 +49,28 @@ export function smoothen(root) {
   const mats = new Map();
   root.traverse(o => {
     if (!o.isMesh || o.isInstancedMesh || !(o.userData.char || o.userData.smooth) || o.userData.noSmooth) return;
-    const g = o.geometry, p = g.parameters || {}; let ng = null;
-    if (g.type === 'IcosahedronGeometry') ng = new THREE.IcosahedronGeometry(p.radius, Math.max(p.detail ?? 0, 3));
-    else if (g.type === 'SphereGeometry') ng = new THREE.SphereGeometry(p.radius, Math.max(p.widthSegments, 18), Math.max(p.heightSegments, 12), p.phiStart, p.phiLength, p.thetaStart, p.thetaLength);
-    else if (g.type === 'BoxGeometry') { const mn = Math.min(p.width, p.height, p.depth); if (mn >= 0.02) ng = new RoundedBoxGeometry(p.width, p.height, p.depth, 2, mn * 0.16); }
-    else if (g.type === 'CylinderGeometry') ng = new THREE.CylinderGeometry(p.radiusTop, p.radiusBottom, p.height, Math.max(p.radialSegments, 16), p.heightSegments, p.openEnded, p.thetaStart, p.thetaLength);
-    else if (g.type === 'ConeGeometry') ng = new THREE.ConeGeometry(p.radius, p.height, Math.max(p.radialSegments, 16), p.heightSegments, p.openEnded, p.thetaStart, p.thetaLength);
-    if (!ng) return;
-    // la geometría nueva sale de .parameters y pierde los translate()/rotate() previos (los brazos hacen g.translate(0, .5, 0):
-    // sin esto quedaban como troncos saliendo del hombro). Misma caja desplazada: se corre; caja distinta (rotada/escalada): no se toca.
-    g.computeBoundingBox(); ng.computeBoundingBox();
-    { const a = g.boundingBox, b = ng.boundingBox, sa = a.getSize(new THREE.Vector3()), sb = b.getSize(new THREE.Vector3());
-      if (sa.distanceTo(sb) > 1e-4 * Math.max(1, sa.length())) { ng.dispose(); return; }
-      const d = a.getCenter(new THREE.Vector3()).sub(b.getCenter(new THREE.Vector3()));
-      if (d.lengthSq() > 1e-12) ng.translate(d.x, d.y, d.z); }
+    const g = o.geometry, p = g.parameters || {};
+    // misma primitiva con mas detalle (hi) o con los parametros originales (ref, para medir que transformaciones se le aplicaron)
+    const make = hi => {
+      if (g.type === 'IcosahedronGeometry') return new THREE.IcosahedronGeometry(p.radius, hi ? Math.max(p.detail ?? 0, 3) : p.detail);
+      if (g.type === 'SphereGeometry') return new THREE.SphereGeometry(p.radius, hi ? Math.max(p.widthSegments, 18) : p.widthSegments, hi ? Math.max(p.heightSegments, 12) : p.heightSegments, p.phiStart, p.phiLength, p.thetaStart, p.thetaLength);
+      if (g.type === 'BoxGeometry') { const mn = Math.min(p.width, p.height, p.depth); if (mn < 0.02) return null;
+        return hi ? new RoundedBoxGeometry(p.width, p.height, p.depth, 2, mn * 0.16) : new THREE.BoxGeometry(p.width, p.height, p.depth); }
+      if (g.type === 'CylinderGeometry') return new THREE.CylinderGeometry(p.radiusTop, p.radiusBottom, p.height, hi ? Math.max(p.radialSegments, 16) : p.radialSegments, p.heightSegments, p.openEnded, p.thetaStart, p.thetaLength);
+      if (g.type === 'ConeGeometry') return new THREE.ConeGeometry(p.radius, p.height, hi ? Math.max(p.radialSegments, 16) : p.radialSegments, p.heightSegments, p.openEnded, p.thetaStart, p.thetaLength);
+      return null;
+    };
+    const ref = make(false); if (!ref) return;
+    // .parameters no guarda translate()/rotate() previos (brazos de buildJoven: g.translate(0, .5, 0) -> quedaban como troncos).
+    // Se compara la geometria real contra la misma primitiva SIN tocar (ref): misma caja corrida -> se corre la nueva igual;
+    // caja distinta (rotada/escalada) -> no se toca. (Antes se comparaba contra la de mas detalle y casi todo quedaba descartado.)
+    g.computeBoundingBox(); ref.computeBoundingBox();
+    const a = g.boundingBox, r = ref.boundingBox, sa = a.getSize(new THREE.Vector3()), sr = r.getSize(new THREE.Vector3());
+    ref.dispose();
+    if (sa.distanceTo(sr) > 1e-4 * Math.max(1, sa.length())) return;
+    const ng = make(true);
+    const d = a.getCenter(new THREE.Vector3()).sub(r.getCenter(new THREE.Vector3()));
+    if (d.lengthSq() > 1e-12) ng.translate(d.x, d.y, d.z);
     // color por vértice (el material comparte vertexColors con la utilería): solo el degradé vertical, sin ruido por cara
     ng.computeBoundingBox(); { const { min, max } = ng.boundingBox, hgt = (max.y - min.y) || 1, pos = ng.attributes.position, col = new Float32Array(pos.count * 3);
       for (let i = 0; i < pos.count; i++) { const k = 0.84 + 0.2 * (pos.getY(i) - min.y) / hgt; col.set([k, k, k], i * 3); }
