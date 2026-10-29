@@ -13,7 +13,7 @@ Referencia exacta de `engine/*.js` (three.js) y de `script.json`, para escribir 
 ```
 script.json ──voices.mjs──▶ voices/<id>.mp3 + .json ──build.mjs──▶ film.json + frames/bus_*.wav
                                                                     │
-scene.js (lee film.json + script.json) ──render.mjs──▶ frames/video.mp4 + sfx.json ──mix.py──▶ out/<ep>.mp4
+scene.js (lee film.json + script.json) ──render.mjs──▶ frames/video.mp4 + sfx.json ──mix.py──▶ out/<ep>.mp4 + out/<ep>-wa.mp4
 ```
 
 ```
@@ -42,17 +42,20 @@ python -I tools/mix.py <ep>
 | `timing` | `"take"` \| ausente | `"take"`: usa la pausa natural de la toma entre líneas (acotada a 0,12-1,4 s). Si no, gap 0,5 s · build |
 | `protegido` | id de personaje | Personaje que nunca queda en ridículo ni es sarcástico (antes `saint`). El lint marca como error tags sarcásticos/impacientes en sus líneas; la mezcla le da un poco más de reverb · lint, mix |
 | `set` | `pieza` \| `piedra` \| `casa-dia` \| `lago` \| `campo` \| `colonial` | Preset de mezcla: música por defecto, ambiente y reverb (default `pieza`) · mix |
-| `music` | `piano` \| `oud` \| `ninguna` | Pisa la música del set · mix |
+| `music` | `piano` \| `oud` \| `pulso` \| `ninguna` | Pisa la música del set. `pulso`: pop con pulso, subida antes del `climax` y explosión en el clímax; en la `coda` queda el piano · mix |
+| `beatAt` | id de línea \| segundos | Solo `pulso`: dónde entra el pulso (por defecto, el 18 % del video) · mix |
+| `musicEnd` | `"full"` | Solo `pulso`: termina arriba, sin la coda de piano solo · mix |
+| `musicGain` | dB (0) | Solo `pulso`: sube o baja la música · mix |
 | `lluvia` | bool | Capa de lluvia en el ambiente · mix |
 | `tail` | segundos (0,7) | Aire después de la última palabra antes del corte · build, lint (< 1,8 s sin `coda` = aviso) |
-| `minShot` | segundos | Duración mínima de plano para el director (3-4 tierno, ~2 comedia). Lo pasa la escena a `planShots` |
+| `minShot` | segundos | Duración mínima de plano para el director (1,8-2,2; ≥ 3 solo para un video lento a propósito, el lint avisa arriba de 2,4). Lo pasa la escena a `planShots` |
 | `perfil` | texto | Perfil de reglas del lint |
 | `voices` | `{ who: { id, name, reverb? } }` | Voz de ElevenLabs por personaje; `reverb` multiplica la reverb de ese personaje · voices, mix |
 | `lines` | array | Ver abajo |
 | `sfx` | array | Efectos generados por prompt (ver abajo) · sfx, build |
 | `amb` | array | Ventanas de ambiente (ver abajo) · mix |
 | `hooks` | `[{ text, key?, until? }]` | Texto gancho opcional (solo para A/B: `--flags hookB` usa el segundo). El lint avisa · escena (`drawHook`) |
-| `ficha` | objeto | Ficha de guion (valor, decisión, núcleo, button…). Documentación, no se procesa |
+| `ficha` | objeto | Ficha de guion (`vuelta`, valor, decisión, núcleo, button…). El lint solo avisa si falta `vuelta` (la ficha que cae); el resto es documentación |
 
 ### Campos de cada línea (`lines[]`)
 | Campo | Tipo | Qué hace |
@@ -121,7 +124,8 @@ Dentro de la ventana bajan el ambiente base (`duck`) y la música (`music_duck`)
 | `glow` | `(color, k)` | `MeshBasicMaterial` × `k`, `toneMapped: false` (HDR: lo agarra el bloom) |
 | `box` | `(w, h, d, m, x, y, z, parent?, shadows=true)` | Caja con sombras. Sin `parent` usa `box.defaultParent` (setearlo a `scene`) |
 | `V` | `(x, y, z)` | `new THREE.Vector3` |
-| `facetJitter` | `(root, { jitter=0.1, top=1.04, bottom=0.8 })` | Variación de luminosidad por cara + oscurecido hacia abajo (low-poly "con alma"). Saltea mallas con `userData.noJitter` e instanciadas. Llamar **una vez**, después de armar todo |
+| `facetJitter` | `(root, { jitter=0.1, top=1.04, bottom=0.8 })` | Variación de luminosidad por cara + oscurecido hacia abajo (low-poly "con alma"). Saltea mallas con `userData.noJitter` e instanciadas. Antes llama a `smoothen(root)`. Llamar **una vez**, después de armar todo |
+| `smoothen` | `(root)` | Bisela las mallas de personaje (`userData.char`, que ponen `buildTunica`/`buildPersona`, o `userData.smooth`): cajas redondeadas, más facetas y más lados. Respeta los `translate()` previos y no toca geometrías rotadas o escaladas. `userData.noSmooth` lo evita; `--flags facetado` lo apaga |
 | `LOOK` | uniforms `{ uRimDir, uRimCol, uRimPow, uGroundY, uAOH, uAOMin }` | Compartidos por todos los materiales `cinematic` |
 | `cinematic` | `(material)` | Rim fresnel del lado de la luz fría + oscurecido de contacto por altura. Aplicar a todo `MeshStandardMaterial` salvo `userData.noLook` |
 
@@ -429,7 +433,7 @@ window.__ready = true;
 | `window.__ready` | `true` cuando terminó de cargar |
 
 ### Flags de URL (`--flags a,b`)
-`nodof`, `nobloom`, `agx` (tone mapping AgX), `hookB` (segundo gancho), y `cam:x_y_z_lx_ly_lz_fov` para una cámara de debug fija (la escena la implementa: ver `frame()` del demo).
+`nodof`, `nobloom`, `agx` (tone mapping AgX), `hookB` (segundo gancho), `facetado` (personajes sin biselar), `suave` (personajes con sombreado suave: mezcla estilos, no recomendado) y `cam:x_y_z_lx_ly_lz_fov` para una cámara de debug fija (la escena la implementa: ver `frame()` del demo).
 
 ---
 

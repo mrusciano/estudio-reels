@@ -9,6 +9,7 @@
 //   - N por defecto sale de la RAM libre (cada worker ~0.6 GB), con tope 3: medido 27/10/2026 en la RTX 4060,
 //     1 worker 14 fps, 2 -> 29, 3 -> 31, 4 -> 20 (GPU al 97 %, se traba). --workers lo fuerza (en una GPU mas chica, probar 1-2).
 // Chrome: CHROME_PATH o se busca solo (Windows, macOS, Linux). Encoder: NVENC (NVIDIA) > VideoToolbox (Mac) > x264 (CPU).
+// Candado .render.lock: un render a la vez; los demas esperan. Si el proceso dueño murio, el candado se roba solo.
 import http from 'node:http';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -33,6 +34,21 @@ if (!CHROME) { console.error('No encontre Chrome. Instalalo o defini CHROME_PATH
 const GPU_ARGS = process.platform === 'win32' ? ['--use-angle=d3d11'] : process.platform === 'darwin' ? ['--use-angle=metal'] : ['--use-angle=vulkan', '--enable-features=Vulkan'];
 const FPS = 30;
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.svg': 'image/svg+xml', '.jpg': 'image/jpeg', '.png': 'image/png', '.woff2': 'font/woff2' };
+
+// candado: un solo render a la vez (varios agentes en paralelo comparten la GPU y la RAM). Si el dueño murió, se roba.
+const LOCK = path.join(ROOT, '.render.lock');
+const alive = pid => { try { process.kill(pid, 0); return true; } catch { return false; } };
+for (let waited = 0; ; waited++) {
+  try { fs.mkdirSync(LOCK); fs.writeFileSync(path.join(LOCK, 'pid'), String(process.pid)); break; }
+  catch {
+    let pid = 0; try { pid = +fs.readFileSync(path.join(LOCK, 'pid'), 'utf8'); } catch {}
+    if (pid && !alive(pid)) { fs.rmSync(LOCK, { recursive: true, force: true }); continue; }
+    if (waited % 30 === 0) console.log(`esperando el candado de render (lo tiene pid ${pid})…`);
+    await new Promise(r => setTimeout(r, 2000));
+  }
+}
+const unlock = () => { try { if (+fs.readFileSync(path.join(LOCK, 'pid'), 'utf8') === process.pid) fs.rmSync(LOCK, { recursive: true, force: true }); } catch {} };
+process.on('exit', unlock);
 
 const server = http.createServer((req, res) => {
   const p = path.join(ROOT, decodeURIComponent(req.url.split('?')[0]));
@@ -66,7 +82,7 @@ async function openWorker(k, log = false) {
   return { browser, page, gpu };
 }
 const cleanup = async () => { for (const b of browsers) await b.close().catch(() => {}); server.close(); };
-process.on('SIGINT', async () => { await cleanup(); process.exit(130); });
+process.on('SIGINT', async () => { await cleanup(); unlock(); process.exit(130); });
 
 // encoder: NVENC (NVIDIA) > VideoToolbox (Mac) > x264 (CPU)
 function pickEncoder() {

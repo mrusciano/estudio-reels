@@ -15,7 +15,7 @@ const base = JSON.parse(fs.readFileSync(path.join(src, 'script.json'), 'utf8')),
 const script = {
   title: id, model: base.model, language: P.idioma || base.language, stability: base.stability, tempo: 1.0, timing: 'take',
   perfil: P.perfilGuion || 'tierno', set: base.set, music: base.music, tail: 2.4, minShot: 1.2,
-  ficha: { valor: '', quienAma: '', quienCalcula: '', algoChicoConNombre: '', decision: '', objecion: '', nucleo: '', button: '', coda: '' },
+  ficha: { vuelta: '', valor: '', quienAma: '', quienCalcula: '', algoChicoConNombre: '', decision: '', objecion: '', nucleo: '', button: '', coda: '' },
   voices: P.voces || base.voices,
   lines: [{ id: 'l1', who: Object.keys(P.voces || base.voices)[0], tags: '[curious]', text: 'Primera línea.' }],
 };

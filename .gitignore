@@ -7,3 +7,4 @@ episodes/*/voices/takes/
 episodes/*/voices/*.redo.mp3
 casting/
 entregas/
+.render.lock

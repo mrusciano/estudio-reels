@@ -26,12 +26,19 @@ Principio: el que quiere **se adelanta** (busca, va, se sienta al lado) y el otr
 | 4 | Objeción honesta | 36-44 | 22-26 | 29-35 | "Eso no cierra": la objeción que tendría el público, dicha con respeto y un dato |
 | 5 | Respuesta-pregunta | 44-68 | 26-41 | 35-54 | Una pregunta que devuelve la objeción, o "una vez alguien…" con flashback. El que calcula contesta al pie de la letra (risa) |
 | 6 | **Núcleo** | 68-85 | 41-51 | 54-68 | Una línea personal de **≤ 8 palabras**, concreta, citable |
-| 7 | Elipsis y pago visual | 85-92 | 51-55 | 68-74 | Corte de tiempo ("tres meses después"): vemos el resultado de la acción |
+| 7 | Elipsis y pago visual | 85-92 | 51-55 | 68-74 | Corte de tiempo ("tres meses después") **dentro de la escena**, sin negro: vemos el resultado de la acción |
 | 8 | **Button** | 92-96 | 55-57 | 74-77 | Callback de algo del primer 40 %, **dicho por el que cambió** |
 | 9 | **Coda** | 96-100 | 57-60 | 77-80 | 3-5 s de gesto o imagen espejo del primer plano, con luz nueva. **Sin texto nuevo** |
 
+### Ficha que cae (la vuelta de tuerca)
+Cada video necesita **una vuelta de tuerca**: una lectura o un dato que el público no esperaba sobre algo que cree conocer, y que le hace decir "¡uh!". No es un chiste ni una moraleja: es el momento en que algo conocido se ve distinto.
+- Ejemplos con las variantes de abajo: el fiado no es una pérdida, es lo único que hace volver a Don Raúl; el pibe que no entregaba nada era el profe; el que trabaja todo el finde "para el equipo" lo hace sin el equipo.
+- **Se escribe primero**, en `ficha.vuelta`, antes que cualquier línea. Si no aparece, la idea todavía no está: no se escribe el guion. El lint avisa cuando la ficha no tiene `vuelta`.
+- Evidencia: en una segunda ronda de devoluciones (6 personas), tres pidieron esto mismo con otras palabras. Los dos videos favoritos la tenían; los dos que menos gustaron eran un documental y un resumen biográfico, sin vuelta.
+
 ### Ficha (completarla antes de escribir una sola línea)
 ```
+VUELTA (la ficha que cae, lo primero): ________
 VALOR: empieza en ________ (−) → termina en ________ (+)
 MÉTRICA DEL QUE CALCULA (beat 1): ________   ← vuelve en el button
 LO PEQUEÑO CON NOMBRE: ________
@@ -44,7 +51,7 @@ ELIPSIS: ________   PAGO VISUAL: ________
 BUTTON (callback de: ________, lo dice: ________): ________
 CODA (gesto o espejo del plano 1, 3-5 s): ________
 ```
-En el kit, la ficha va en `script.ficha` (el lint la ignora, pero queda registrada para rotar fórmulas entre videos).
+En el kit, la ficha va en `script.ficha` (`tools/nuevo.mjs` deja el esqueleto). El lint solo mira que tenga `vuelta`; el resto queda registrado para rotar fórmulas entre videos.
 
 ### Ejemplo disecado: "Rulo" (el demo del kit, `episodes/demo`)
 | Línea | Texto | Función |
@@ -91,9 +98,9 @@ Lo que se repite es la **relación** (una lógica que mide frente a un afecto qu
 
 ---
 
-## 3. Checklist (15 reglas verificables)
+## 3. Checklist (17 reglas verificables)
 
-1. **El primer cuadro ya está adentro de la escena.** Primera línea: un personaje hablándole a otro, con un dato concreto (número, objeto, lugar). Nada de "¿Sabías que…?", saludos ni contexto.
+1. **Conflicto primero: el primer cuadro ya es el problema.** Primera línea: un personaje hablándole a otro, adentro del conflicto, con un dato concreto (número, objeto, lugar). Nada de "¿Sabías que…?", saludos, contexto ni un rótulo de lugar y año ("Buenos Aires, 1779") para arrancar. Dos personas lo dijeron sin que se les preguntara: "ponen el conflicto primero, eso atrapa".
 2. **El valor gira.** Está escrito "empieza en ___ → termina en ___" (opuestos) y la decisión cae **antes del 40 %**.
 3. **Hay una objeción honesta.** Alguien dice la objeción que tendría el público, con un argumento razonable (dato, costo o riesgo). Nadie la ridiculiza. En el kit: `obj: true`.
 4. **El que quiere se adelanta y no discute.** Toma la iniciativa; al menos la mitad de sus líneas son preguntas o decisiones de ≤ 3 palabras; ninguna pasa de 12 palabras (salvo un relato con flashback); ≤ ~20 palabras propias por minuto.
@@ -104,10 +111,12 @@ Lo que se repite es la **relación** (una lógica que mide frente a un afecto qu
 9. **Hay una línea núcleo citable.** ≤ 8 palabras, concreta y personal, que alguien copiaría en un comentario. Nadie dice la moraleja.
 10. **El humor apunta bien.** Cae en el que calcula, en el protagonista o en la situación. Nunca en el personaje `protegido`. Sin dobles sentidos (revisarlos en la variante del idioma).
 11. **Hay dos velocidades.** Ida y vuelta con gaps de 0,2-0,4 s; silencio de 0,9-1,5 s antes de la decisión y antes del button.
-12. **Hay una elipsis con consecuencia.** Un salto de tiempo o un corte muestra el resultado de la acción.
+12. **Hay una elipsis con consecuencia.** Un salto de tiempo o un corte muestra el resultado de la acción. La transición va **dentro de la escena**, nunca un corte a negro con texto (ver § 4).
 13. **El button es un callback del que cambió.** Retoma una palabra, un número o un objeto del primer 40 % y lo dice el personaje que cambió.
 14. **Hay una coda de 3-5 s.** Gesto o imagen espejo del primer plano, con luz nueva. Sin texto nuevo, sin cartel, sin moraleja. La música cierra en una cadencia, no en un corte.
 15. **El cierre apunta a una relación o a un cambio concreto**, no a una frase de autoayuda ("sé vos mismo", "creé en vos"). El final se gana con lo que pasó, no con lo que alguien dice.
+16. **Hay una ficha que cae.** La vuelta de tuerca está escrita en `ficha.vuelta` antes del guion y aparece en pantalla (ver § 1).
+17. **La conclusión no le cae sola al protagonista.** La dispara otro personaje en pocas palabras y el protagonista reacciona (ver § 10).
 
 ---
 
@@ -128,6 +137,11 @@ Lo que se repite es la **relación** (una lógica que mide frente a un afecto qu
 | **Personajes que mueven los brazos sin motivo** | "Mueven los brazos mientras están quietos, es raro." Las manos seguían la voz sílaba por sílaba | Gestos sostenidos solo en líneas largas (`held()`); quietos el resto. Ver `aprendizajes-tecnicos.md` |
 | **Monólogo a cámara con frase pura** | El formato "POV: te habla a vos" con una cita sola "no me gustó nada" | Siempre dos personajes con conflicto |
 | **Episodios centrados en un personaje invitado** | En los referentes rindieron ×0,84 contra ×1,16 de sus vecinos | Primero que el núcleo funcione |
+| **La conclusión le cae sola al protagonista** | "Llega solo a esa conclusión": lo dijeron dos personas de la segunda ronda y el usuario lo repitió sobre la versión siguiente. Un "¿Y vos?" abierto tampoco alcanzó | La dispara otro en pocas palabras y el protagonista reacciona (§ 10) |
+| **Todo lento** | "Todo muy lento", "partes tranqui y partes rápidas" (4 de 6 personas). No era la duración: eran silencios largos y planos de 3 s o más | Silencios de ≤ 0,8 s salvo 1-2 antes de la decisión o del button; `minShot` 1,8-2,2 (§ 5) |
+| **Cortes a negro con texto** | "Tres horas después" sobre negro "corta raro" | Transición dentro de la escena: cambia la luz o la hora, entra un `whoosh` y aparece un rótulo chico arriba (≤ 1,4 s, texto blanco con sombra, sin fondo negro), o un match cut |
+| **Arrancar con contexto** | Un video que abría con "lugar, año" se vio lento y solemne | Conflicto primero: el cuadro 1 ya es el problema (§ 3, regla 1) |
+| **Sin vuelta de tuerca** | Un documental y un resumen biográfico fueron los que menos gustaron: informaban, no sorprendían | Ficha que cae (§ 1) |
 
 ---
 
@@ -146,7 +160,9 @@ Lo que se repite es la **relación** (una lógica que mide frente a un afecto qu
   - interrupción: la línea anterior termina en `—` y la siguiente arranca con `[jumping in]` (gap chico o negativo).
   - Con `timing: "take"` se usan las pausas reales de la toma; el `gap` explícito queda solo para los silencios emocionales.
 - **Duración:** la que pida la historia. En Instagram el alcance es apenas mejor en 30-60 s y cae arriba de 90 s (−20 a −35 %). Sketch: 20-45 s. Historia con flashback: 50-85 s. En YouTube Shorts no se encontró relación entre duración y vistas.
-- **Planos:** ~4 s por plano en lo tierno (13-15 planos por minuto en los referentes que mejor rindieron); ~2 s en comedia rápida. En el kit: `minShot`.
+- **Planos:** ~4 s por plano **de promedio** en lo tierno (13-15 planos por minuto en los referentes que mejor rindieron); ~2 s en comedia rápida. Nada de planos de más de 4 s sin que pase algo. En el kit, `minShot` es el **mínimo** (las ráfagas más cortas se funden en un plano de dos): 1,8-2,2. Con 3 s, un lote entero se sintió "todo muy lento"; el lint avisa arriba de 2,4.
+- **Silencios:** ≤ 0,8 s, salvo **uno o dos** de 1,0-1,3 s antes de la decisión o del button. El lint avisa con más de dos silencios de 1,3 s o más.
+- **Variar el ritmo entre videos:** ni todos rápidos ni todos lentos. En un lote conviven videos rápidos (30-40 s, cortes de ~1 s, música con pulso desde el arranque), medios y lentos (íntimos, piano, silencios). Corregir los silencios muertos y los planos eternos no es pasar todo a ritmo de TikTok. (El pedido de variar es gusto de ese usuario; el "todo lento" lo dijeron 4 de 6 personas.)
 
 ---
 
@@ -217,7 +233,10 @@ Cinco usos que no la convierten en "respuesta mágica":
 ## 10. Mostrar en vez de decir
 
 - **2 + 2:** no le des el 4 al público. Los comentarios escriben la moraleja; si el video la dice, no queda nada para comentar.
-- **Subtexto:** que la verdad la descubra el personaje con sus palabras ("estoy haciendo todo esto por vos… y no estoy con vos") en lugar de que otro se la explique.
+- **Subtexto:** que nadie le *explique* la verdad al protagonista (eso es sermón), pero que **tampoco le caiga sola**.
+  - "Estoy haciendo todo esto por vos… y no estoy con vos", dicho de golpe por el protagonista, gustó en una primera ronda. En la siguiente se leyó como "llega solo a esa conclusión".
+  - La regla que quedó: **la conclusión la dispara otro personaje en pocas palabras y el protagonista reacciona.** Ejemplo: "Es todo por el equipo." / "Por el equipo… y sin el equipo." / "…Uh. Dicho así, suena feo."
+  - La reacción del protagonista (humor, silencio, un gesto) es lo que hace que la idea se sienta ganada. Una pregunta abierta ("¿Y vos?") que lo deja concluir solo no alcanza.
 - **Plantar y pagar:** todo lo que paga al final aparece en los primeros 15 s.
 - **Pago visual:** los números se ven (un holograma que se llena, una planilla, un contador); el cambio se ve (la luz que amanece, la planta que brota).
 - **Imagen final espejo** del primer plano, con luz nueva. Pensar el último cuadro como algo que alguien usaría de fondo de pantalla.
@@ -228,10 +247,11 @@ Cinco usos que no la convierten en "respuesta mágica":
 
 ## 11. Rotar fórmulas para no volverse previsible
 
-La plantilla también se gasta si se copian sus frases. Entre videos seguidos, rotá **tres variables**:
+La plantilla también se gasta si se copian sus frases. Entre videos seguidos, rotá **cuatro variables**:
 1. **Quién calcula:** un asistente, el propio protagonista (su ansiedad), un tercero, "el mundo" (las métricas, el grupo, el jefe).
 2. **Cómo aparece la referencia:** usos 1-5, y uno de cada tres sin ninguna.
-3. **Tipo de button:**
+3. **Ritmo:** rápido, medio o lento, con su música (`pulso` para lo rápido, `piano` para lo íntimo). Ver § 5.
+4. **Tipo de button:**
 
 | # | Mecanismo | Ejemplo genérico |
 |---|---|---|

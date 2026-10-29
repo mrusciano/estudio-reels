@@ -56,7 +56,7 @@ node tools/sfx.mjs <id>                       # efectos por prompt (opcional, ga
 node tools/build.mjs <id>                     # film.json: tiempos, subtítulos, boca
 node tools/render.mjs <id> stills 1 5 9 ...   # contact sheet en episodes/<id>/stills/sheet.jpg → MIRARLO
 node tools/render.mjs <id> video              # cuadros en GPU (workers en paralelo + NVENC si hay)
-python -I tools/mix.py <id>                   # música, ambiente, efectos, loudness → out/<id>.mp4
+python -I tools/mix.py <id>                   # música, ambiente, efectos, loudness → out/<id>.mp4 + out/<id>-wa.mp4 (aborta si no da −14 LUFS)
 python -I tools/hoja-lote.py <carpeta>        # hoja comparativa de un lote de videos
 ```
 Casting: `node tools/casting-solo.mjs casting/<personaje> "[tags] líneas de ese personaje" Nombre:voiceId ...`

@@ -1,5 +1,7 @@
 # Mezcla final: voces (cadena + reverb), musica sintetizada, ambiente nocturno, efectos y loudnorm -14 LUFS.
 # Uso: python -I tools/mix.py <episodio>   (necesita frames/video.mp4, frames/bus_*.wav, film.json, sfx.json)
+# Sale: out/<ep>.mp4 (calidad Instagram), out/<ep>-wa.mp4 (720p liviano para WhatsApp) y frames/bed.wav (stem musica+ambiente).
+# Aborta si la mezcla tiene NaN/inf o si alguna salida no mide -14 +/- 2 LUFS.
 import json, subprocess, sys
 from pathlib import Path
 import numpy as np
@@ -16,8 +18,12 @@ script = json.loads((EP / 'script.json').read_text(encoding='utf-8'))
 # ciudad lejana, pajaros al amanecer) | 'lago' (orilla: olas, brisa) | 'campo' (exterior abierto) | 'colonial' (pueblo tranquilo)
 SET = script.get('set', 'pieza')
 if SET == 'betania': SET = 'casa-dia'
-MUS = script.get('music')  # 'piano' (tierno, Fa mayor) | 'oud' (laud, color de Medio Oriente) | 'ninguna'; por defecto sale del set(ej. Marta v2: casa de retiro actual en la casa de piedra)
+MUS = script.get('music')  # 'piano' (tierno, Fa mayor) | 'oud' (laud, color de Medio Oriente) | 'pulso' (pop con subida y explosion) | 'ninguna'; por defecto sale del set
 OUD = MUS == 'oud' if MUS else SET in ('piedra', 'casa-dia'); PIANO = MUS == 'piano' if MUS else SET in ('pieza', 'lago', 'campo', 'colonial')
+# 'pulso' (devolucion medida: "la musiquita no atrae", "le falta explosion al final"): piano + pad, el pulso entra en 'beatAt',
+# subida antes del climax y explosion en el climax. Opciones: beatAt (id de linea o segundos), musicEnd: "full" (termina arriba), musicGain (dB)
+PULSO = MUS == 'pulso'
+if PULSO: OUD = PIANO = False
 cue_at = {c['id']: c['at'] for c in film['cues']}
 TOTAL = film['total']
 N = int(TOTAL * SR) + 1
@@ -120,11 +126,65 @@ if PIANO:
     swell = 0.8 + 0.4 * np.clip((t - TOTAL * 0.45) / (TOTAL * 0.5), 0, 1)
     music = (pno * 0.03 + lp(pad2, 700) * 0.0045) * swell
 clim = next((l for l in script['lines'] if l.get('climax') or l.get('visual')), None)
-if clim and clim['id'] in cue_at:
+if PULSO:
+    # pop calido a 92 BPM en Fa (I-V-vi-IV): intro con piano + pad; el pulso entra en 'beatAt' (id de linea, o 18 % del video);
+    # antes del climax: subida (ruido que crece) y en el climax: golpe grave + platillo + todo arriba; en la coda queda solo el piano.
+    def piano(f, dur=2.4):
+        n = int(dur * SR); x = np.arange(n) / SR
+        tone = sum(np.sin(2 * np.pi * f * h * x) * a * np.exp(-x / (0.8 / h ** 0.5)) for h, a in ((1, 1), (2, 0.4), (3, 0.16), (4, 0.07)))
+        return lp(tone * np.minimum(1, x / 0.004), 4800)
+    prog = [(174.61, 220.0, 261.63), (130.81, 164.81, 196.0), (146.83, 174.61, 220.0), (116.54, 146.83, 174.61)]
+    beat = 60 / 92; bar = beat * 4
+    def at_line(key, dflt):
+        v = script.get(key)
+        if isinstance(v, str) and v in cue_at: return cue_at[v] - 0.15
+        if isinstance(v, (int, float)): return float(v)
+        return dflt
+    tb = at_line('beatAt', TOTAL * 0.18)
+    tc = (cue_at[clim['id']] - 0.25) if clim and clim['id'] in cue_at else TOTAL * 0.72
+    coda = next((l for l in script['lines'] if l.get('coda')), None)
+    te = (cue_at[coda['id']] - 0.2) if coda and coda['id'] in cue_at else TOTAL - 3.0
+    te = max(te, tc + 2.5)
+    if script.get('musicEnd') == 'full': te = TOTAL + 1  # termina arriba, sin la coda de piano solo
+    pno = np.zeros(N); pad2 = np.zeros(N); bass = np.zeros(N); drums = np.zeros(N)
+    kick = (lambda n: np.sin(2 * np.pi * np.cumsum(45 + 75 * np.exp(-np.arange(n) / SR / 0.035)) / SR) * np.exp(-np.arange(n) / SR / 0.22))(int(0.5 * SR))
+    clap = bp(rng.standard_normal(int(0.25 * SR)), 900, 5000) * np.exp(-np.arange(int(0.25 * SR)) / SR / 0.06)
+    hat = hp(rng.standard_normal(int(0.06 * SR)), 7000) * np.exp(-np.arange(int(0.06 * SR)) / SR / 0.012)
+    for bi, b0 in enumerate(np.arange(0.2, TOTAL, bar)):
+        ch = prog[bi % 4]
+        place(pno, b0, piano(ch[0] / 2, 3.2), 0.5)
+        for k in range(8):  # arpegio en corcheas
+            f = (ch[0], ch[1], ch[2], ch[1] * 2, ch[2], ch[1], ch[2] * 2 if k == 6 else ch[0] * 2, ch[2])[k]
+            place(pno, b0 + beat / 2 * k, piano(f, 1.6), 0.2 if k % 2 else 0.27)
+        sl = win(b0 - 0.4, b0 + bar + 0.4); tt = t[sl]
+        w = np.clip((tt - b0 + 0.4) / 0.8, 0, 1) * np.clip((b0 + bar + 0.4 - tt) / 0.8, 0, 1)
+        for f in ch: pad2[sl] += (triw(f, sl) + triw(f * 1.004, sl) + triw(f * 0.996, sl)) * w
+        for k in range(4):
+            tk = b0 + beat * k
+            if tk < tb or tk >= te: continue
+            full = tk >= tc
+            place(drums, tk, kick, 0.9 if k in (0, 2) else (0.55 if full else 0))
+            if k in (1, 3): place(drums, tk, clap, 0.35 if full else 0.22)
+            for h in (0, 0.5): place(drums, tk + beat * h, hat, (0.12 if full else 0.07) * (1 if h else 0.6))
+            n = int(beat * 0.95 * SR); x = np.arange(n) / SR
+            place(bass, tk, np.sin(2 * np.pi * ch[0] / 2 * x) * np.exp(-x / 0.5) * np.minimum(1, x / 0.01), 0.7 if k in (0, 2) else 0.4)
+    # subida antes del climax y explosion
+    rise = np.zeros(N); sl = win(tc - 2.2, tc); tt = t[sl]
+    # el clip importa: el slice arranca una muestra antes -> base negativa ** 2.5 -> NaN -> loudnorm satura toda la mezcla
+    rise[sl] = hp(rng.standard_normal(len(tt)), 2500) * np.clip((tt - (tc - 2.2)) / 2.2, 0, 1) ** 2.5
+    boom = np.zeros(N)
+    nb = int(3.5 * SR); xb = np.arange(nb) / SR
+    place(boom, tc, np.sin(2 * np.pi * np.cumsum(38 + 40 * np.exp(-xb / 0.08)) / SR) * np.exp(-xb / 0.9), 1.0)
+    place(boom, tc, hp(rng.standard_normal(nb), 5000) * np.exp(-xb / 1.1), 0.25)
+    lift = 1 + 0.55 * np.clip((t - tc) / 0.6, 0, 1) * np.clip((te + 1.5 - t) / 1.5, 0, 1)
+    music = (pno * 0.034 + lp(pad2, 1100) * 0.006 * lift + lp(bass, 400) * 0.05 + drums * 0.05) * lift + rise * 0.02 + boom * 0.09
+    music *= db(4 + script.get('musicGain', 0))
+elif clim and clim['id'] in cue_at:
     tc = cue_at[clim['id']] - 0.3
     music *= db(4.5 * np.clip((t - tc) / 1.5, 0, 1))
 music *= np.clip(t / 1.2, 0, 1)
 if MUS == 'ninguna': music *= 0
+music = np.nan_to_num(music)  # un solo NaN rompe el loudnorm de toda la mezcla
 
 # ---------- ambiente: tono de habitacion, grillos, chisporroteo ----------
 room = lp(rng.standard_normal(N), 180) * 0.007
@@ -252,7 +312,10 @@ bed = (music + amb) * duck
 L += bed + fx * 0.95; R += bed * 0.97 + fx
 fade = np.clip((TOTAL - t) / 0.08, 0, 1)
 st = np.stack([L * fade, R * fade], axis=1).astype(np.float32)
+bad = int((~np.isfinite(st)).sum())
+if bad: raise SystemExit(f'ERROR: {bad} muestras NaN/inf en la mezcla (un NaN rompe loudnorm y el video sale saturado).')
 wavfile.write(FR / 'mix.wav', SR, st)
+wavfile.write(FR / 'bed.wav', SR, (bed * fade).astype(np.float32))  # stem de musica+ambiente: para revisar la cama sin las voces
 
 # ---------- loudnorm en dos pasadas + mux ----------
 TARGET = 'I=-14:TP=-1.5:LRA=9'
@@ -265,4 +328,23 @@ out = EP / 'out' / f"{EP.name}.mp4"
 subprocess.run(['ffmpeg', '-y', '-v', 'error', '-i', str(FR / 'video.mp4'), '-i', str(FR / 'mix.wav'), '-map', '0:v', '-map', '1:a',
                 '-c:v', 'copy',
                 '-af', af, '-ar', '48000', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', '-shortest', str(out)], check=True)
-print('ok', out)
+
+# ---------- copia liviana para WhatsApp: 720x1280, ~2,5 Mbps ----------
+# encoder: NVENC (NVIDIA) > VideoToolbox (Mac) > x264 (CPU), como render.mjs; si uno falla se prueba el siguiente
+wa = EP / 'out' / f"{EP.name}-wa.mp4"
+encoders = [['-c:v', 'h264_nvenc', '-preset', 'p6', '-rc', 'vbr', '-cq', '27', '-b:v', '2500k', '-maxrate', '3500k', '-bufsize', '7000k', '-profile:v', 'high']]
+if sys.platform == 'darwin': encoders.append(['-c:v', 'h264_videotoolbox', '-b:v', '2500k', '-profile:v', 'high'])
+encoders.append(['-c:v', 'libx264', '-preset', 'medium', '-crf', '25', '-maxrate', '3500k', '-bufsize', '7000k'])
+for i, enc in enumerate(encoders):
+    r = subprocess.run(['ffmpeg', '-y', '-v', 'error', '-i', str(out), '-vf', 'scale=720:1280:flags=lanczos', *enc, '-pix_fmt', 'yuv420p',
+                        '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', str(wa)], capture_output=True, text=True)
+    if r.returncode == 0: break
+    if i == len(encoders) - 1: raise SystemExit(f'ERROR: no se pudo codificar {wa}:\n{r.stderr[-800:]}')
+
+# ---------- QA: las dos salidas tienen que medir ~-14 LUFS; si no, algo se rompio (ej.: un NaN -> audio saturado) ----------
+lufs = {}
+for f in (out, wa):
+    r = subprocess.run(['ffmpeg', '-hide_banner', '-nostats', '-i', str(f), '-af', 'ebur128', '-f', 'null', '-'], capture_output=True, text=True)
+    lufs[f] = float(r.stderr[r.stderr.rindex('I:'):].split()[1])
+    if abs(lufs[f] + 14) > 2: raise SystemExit(f'ERROR: {f} mide {lufs[f]} LUFS (esperado -14 +/- 2). No entregar.')
+print('ok', out, f'({lufs[out]} LUFS) | whatsapp:', wa, f'({lufs[wa]} LUFS)')

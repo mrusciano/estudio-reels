@@ -56,6 +56,16 @@ if (PERFIL === 'comico') {
   if (!L.some(l => l.react)) out.warn.push('Ningun "react": marcar 1-3 remates para cortar a la reaccion del que escucha.');
 }
 if (beats > 5) out.warn.push(`${beats} silencios largos: el ritmo se cae.`);
+// ritmo (devolucion medida: "todo muy lento"): silencios muy largos y planos largos
+{ const slow = gaps.filter(g => g >= 1.3).length; if (slow > 2) out.warn.push(`${slow} silencios >= 1,3 s: se siente lento. Dejar los largos solo antes de la decision o del button.`); }
+if (s.minShot != null && s.minShot > 2.4) out.warn.push(`minShot ${s.minShot}: con 3 s o mas los planos se sienten lentos. Usar 1,8-2,2 (salvo un video lento a proposito).`);
+// "ficha que cae": la vuelta de tuerca que sorprende se escribe ANTES del guion (docs/guion.md)
+if (s.ficha && !s.ficha.vuelta) out.warn.push('ficha sin "vuelta": falta la ficha que cae (la vuelta de tuerca que sorprende). Se escribe antes del guion.');
+// variante del perfil: con voseo, el tuteo o el neutro suenan a mezcla de acentos (sobre todo con voces locales)
+if (/rioplat|voseo|argentin|urugua/i.test(P.variante || '')) L.forEach(l => {
+  const m = l.text.match(/(?<!\p{L})(sálvame|ayúdame|mírame|escúchame|perdóname|dime|tú|vosotros|habéis|tenéis|sois|estáis|os\s+(?:digo|doy|pido))(?!\p{L})/iu);
+  if (m) out.err.push(`${l.id}: "${m[1]}" es tuteo/neutro y el perfil es ${P.variante}: va en voseo ("salvame", "decime", "vos"), si no mezcla acentos.`);
+});
 const [dMin, dMax] = R.duracion ?? P.duracion ?? [20, 90];
 if (est < dMin || est > dMax) out.warn.push(`Duracion estimada ${est.toFixed(0)} s, fuera del rango del perfil (${dMin}-${dMax} s).`);
 

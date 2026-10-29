@@ -22,7 +22,7 @@ function ik(S, T, a, b, pole) {
 }
 
 // ---------- persona con túnica y manto (personaje histórico, sabio, mago, abuelo…): barba y aureola opcionales ----------
-export function buildTunica(scene, o = {}) {
+function _buildTunica(scene, o = {}) {
   const C = { skin: '#c48d68', hair: '#3a2316', beard: '#33200f', tunic: '#e6dcc6', mantle: '#8f2b25', sandal: '#5a3a22', ...o.colors };
   const skinM = mat(C.skin), hairM = mat(C.hair, { roughness: 0.95 }), beardM = mat(C.beard, { roughness: 0.95 });
   const tunicM = mat(C.tunic), mantleM = mat(C.mantle, { roughness: 0.9 }), darkM = mat('#140d0a'), whiteM = mat('#f3eee6');
@@ -71,7 +71,7 @@ export function buildTunica(scene, o = {}) {
     const g = new THREE.Group(); g.position.set(s * 0.037, 0.13, 0.1); head.add(g);
     box(0.03, 0.018, 0.008, whiteM, 0, 0, 0, g, false);
     const pupil = box(0.014, 0.016, 0.008, mat('#24150c'), 0, 0, 0.003, g, false);
-    const glint = box(0.005, 0.005, 0.004, glow('#ffffff', 3.0), 0.003, 0.004, 0.008, g, false);
+    const glint = box(0.004, 0.004, 0.004, glow('#ffffff', 1.1), 0.003, 0.004, 0.008, g, false);
     const lid = box(0.034, 0.02, 0.012, skinM, 0, 0.011, 0.004, g, false); lid.geometry.translate(0, -0.01, 0);
     const brow = box(0.04, 0.01, 0.014, hairM, 0, 0.026, 0.005, g, false);
     eyes.push({ g, pupil, glint, lid, brow, s });
@@ -203,7 +203,7 @@ export const PERSONA_PRESETS = {
   chica: { hair: 'long', bangs: false, lashes: true, top: 'hoodie', colors: { skin: '#d9a582', hair: '#3b2418', top: '#8fa7c9', pants: '#3d5577', shoes: '#f1ede6', lips: '#b5615a', iris: '#3a2416' } },
   chico: { hair: 'short', lashes: false, beard: 'stubble', top: 'hoodie', shoulders: 0.215, colors: { skin: '#c99272', hair: '#2a1b12', top: '#4c6b52', pants: '#2f3b4f', shoes: '#e9e5de', lips: '#9c5a4c', iris: '#2b1a10' } },
 };
-export function buildPersona(scene, o = {}) {
+function _buildPersona(scene, o = {}) {
   const base = PERSONA_PRESETS[o.preset ?? 'chica'];
   const P = { ...base, ...o, colors: { ...base.colors, ...o.colors } };
   const C = P.colors;
@@ -275,7 +275,7 @@ export function buildPersona(scene, o = {}) {
     const g = new THREE.Group(); g.position.set(s * 0.036, 0.132, 0.097); head.add(g);
     box(0.03, 0.02, 0.008, whiteM, 0, 0, 0, g, false);
     const pupil = box(0.015, 0.017, 0.008, mat(C.iris), 0, 0, 0.003, g, false);
-    const glint = box(0.005, 0.005, 0.004, glow('#ffffff', 3.0), 0.003, 0.004, 0.008, g, false);
+    const glint = box(0.004, 0.004, 0.004, glow('#ffffff', 1.1), 0.003, 0.004, 0.008, g, false);
     const lid = box(0.034, 0.022, 0.012, skinM, 0, 0.012, 0.004, g, false); lid.geometry.translate(0, -0.011, 0);
     const brow = box(0.038, P.lashes ? 0.007 : 0.01, 0.012, hairM, 0, 0.026, 0.005, g, false);
     if (P.lashes) { const lash = box(0.012, 0.004, 0.006, darkM, s * 0.017, 0.011, 0.006, g, false); lash.rotation.z = s * 0.5; }
@@ -355,3 +355,14 @@ export function buildPersona(scene, o = {}) {
   }
   return { root, pose, anchors, head };
 }
+
+// marca como 'char' toda malla que crea un constructor de personaje (los brazos son mallas sueltas en la escena, no cuelgan
+// del root): así facetJitter -> smoothen las encuentra y las suaviza ("la versión Minecraft", devolución medida).
+function tagNew(scene, fn) {
+  const before = new Set(); scene.traverse(o => before.add(o));
+  const r = fn();
+  scene.traverse(o => { if (o.isMesh && !before.has(o)) o.userData.char = true; });
+  return r;
+}
+export const buildTunica = (scene, o = {}) => tagNew(scene, () => _buildTunica(scene, o));
+export const buildPersona = (scene, o = {}) => tagNew(scene, () => _buildPersona(scene, o));

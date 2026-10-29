@@ -1,5 +1,6 @@
 // Utilidades del estudio: tiempo puro (sin estado), curvas, film.json, camara por anclas, subtitulos.
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 export const W = 1080, H = 1920, FPS = 30;
 export const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
@@ -37,8 +38,47 @@ export function box(w, h, d, m, x = 0, y = 0, z = 0, parent, shadows = true) {
 }
 export const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
-// T3: jitter de luminosidad/tono por cara y oscurecido hacia abajo de cada objeto
+// Suavizado de personajes: cabezas y cuerpos muy facetados se ven "versión Minecraft" (devolución medida).
+// Esferas/icosaedros -> más detalle; cajas >= 2 cm -> cajas redondeadas; cilindros/conos -> más lados.
+// Solo mallas con userData.char (las marcan buildTunica/buildPersona) o userData.smooth; userData.noSmooth lo evita.
+// Flags de URL: ?flags=facetado lo apaga; ?flags=suave además usa sombreado suave (mezcla estilos con la utilería: no recomendado).
+const SMOOTH_SOFT = typeof location !== 'undefined' && /suave/.test(new URLSearchParams(location.search).get('flags') || '');
+const SMOOTH_OFF = typeof location !== 'undefined' && /facetado/.test(new URLSearchParams(location.search).get('flags') || '');
+export function smoothen(root) {
+  if (SMOOTH_OFF) return;
+  const mats = new Map();
+  root.traverse(o => {
+    if (!o.isMesh || o.isInstancedMesh || !(o.userData.char || o.userData.smooth) || o.userData.noSmooth) return;
+    const g = o.geometry, p = g.parameters || {}; let ng = null;
+    if (g.type === 'IcosahedronGeometry') ng = new THREE.IcosahedronGeometry(p.radius, Math.max(p.detail ?? 0, 3));
+    else if (g.type === 'SphereGeometry') ng = new THREE.SphereGeometry(p.radius, Math.max(p.widthSegments, 18), Math.max(p.heightSegments, 12), p.phiStart, p.phiLength, p.thetaStart, p.thetaLength);
+    else if (g.type === 'BoxGeometry') { const mn = Math.min(p.width, p.height, p.depth); if (mn >= 0.02) ng = new RoundedBoxGeometry(p.width, p.height, p.depth, 2, mn * 0.16); }
+    else if (g.type === 'CylinderGeometry') ng = new THREE.CylinderGeometry(p.radiusTop, p.radiusBottom, p.height, Math.max(p.radialSegments, 16), p.heightSegments, p.openEnded, p.thetaStart, p.thetaLength);
+    else if (g.type === 'ConeGeometry') ng = new THREE.ConeGeometry(p.radius, p.height, Math.max(p.radialSegments, 16), p.heightSegments, p.openEnded, p.thetaStart, p.thetaLength);
+    if (!ng) return;
+    // la geometría nueva sale de .parameters y pierde los translate()/rotate() previos (los brazos hacen g.translate(0, .5, 0):
+    // sin esto quedaban como troncos saliendo del hombro). Misma caja desplazada: se corre; caja distinta (rotada/escalada): no se toca.
+    g.computeBoundingBox(); ng.computeBoundingBox();
+    { const a = g.boundingBox, b = ng.boundingBox, sa = a.getSize(new THREE.Vector3()), sb = b.getSize(new THREE.Vector3());
+      if (sa.distanceTo(sb) > 1e-4 * Math.max(1, sa.length())) { ng.dispose(); return; }
+      const d = a.getCenter(new THREE.Vector3()).sub(b.getCenter(new THREE.Vector3()));
+      if (d.lengthSq() > 1e-12) ng.translate(d.x, d.y, d.z); }
+    // color por vértice (el material comparte vertexColors con la utilería): solo el degradé vertical, sin ruido por cara
+    ng.computeBoundingBox(); { const { min, max } = ng.boundingBox, hgt = (max.y - min.y) || 1, pos = ng.attributes.position, col = new Float32Array(pos.count * 3);
+      for (let i = 0; i < pos.count; i++) { const k = 0.84 + 0.2 * (pos.getY(i) - min.y) / hgt; col.set([k, k, k], i * 3); }
+      ng.setAttribute('color', new THREE.BufferAttribute(col, 3)); }
+    o.geometry = ng; o.userData.noJitter = true;
+    // material propio suave (los materiales se comparten con utilería facetada)
+    if (!SMOOTH_SOFT) return; // por defecto queda facetado (low-poly pulido): el suave total mezclaba estilos
+    const m = o.material; if (!m?.isMeshStandardMaterial || !m.flatShading) return;
+    if (!mats.has(m)) { const c = m.clone(); c.flatShading = false; c.needsUpdate = true; mats.set(m, c); }
+    o.material = mats.get(m);
+  });
+}
+
+// T3: jitter de luminosidad/tono por cara y oscurecido hacia abajo de cada objeto (antes suaviza los personajes con smoothen)
 export function facetJitter(root, { jitter = 0.1, top = 1.04, bottom = 0.8 } = {}) {
+  smoothen(root);
   const done = new Set();
   root.traverse(o => {
     if (!o.isMesh || o.isInstancedMesh || !o.material?.isMeshStandardMaterial || o.userData.noJitter || done.has(o.geometry)) return;
