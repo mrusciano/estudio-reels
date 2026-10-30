@@ -83,22 +83,45 @@ for (const s of speakers) {
 
 // 4. subtitulos
 const subs = [];
+const MAXC = 50;
+const txt = ws => ws.map(x => x.w).join(' ');
+// placas huérfanas ("No me / dan las cuentas.", "por / Dios."): si la placa que sigue es muy corta y la anterior no terminó la frase,
+// se reparten las palabras de las dos; se prefiere cortar después de un signo y nunca después de "de", "por", "y"…
+const DEBIL = /^(de|del|por|para|y|e|o|u|ni|en|a|al|con|sin|que|la|el|los|las|lo|un|una|unos|unas|su|sus|mi|mis|tu|tus|se|me|te|le|les|nos|no|muy|más|tan|como|hasta|desde)$/i;
+function rebalancear(groups) {
+  for (let pasada = 0; pasada < 4; pasada++) { let cambio = false; // arreglar una huérfana puede crear otra antes ("Buenos / Aires.")
+  for (let i = 1; i < groups.length; i++) {
+    const A = groups[i - 1], B = groups[i];
+    if (/[.?!…]$/.test(A.at(-1).w) || !(txt(B).length <= 16 || B.length <= 2)) continue;
+    const W = [...A, ...B]; let best = null;
+    for (let k = 1; k < W.length; k++) {
+      const a = W.slice(0, k), b = W.slice(k), la = txt(a).length, lb = txt(b).length;
+      if (la > MAXC || lb > MAXC) continue;
+      const fin = a.at(-1).w, score = Math.abs(la - lb) - (/[.?!…]$/.test(fin) ? 40 : /[,;:]$/.test(fin) ? 25 : 0) + (DEBIL.test(fin.replace(/[¿¡]/g, '')) ? 30 : 0);
+      if (!best || score < best.score) best = { k, score };
+    }
+    if (best && best.k !== A.length) { groups[i - 1] = W.slice(0, best.k); groups[i] = W.slice(best.k); cambio = true; }
+  }
+  if (!cambio) break; }
+  return groups;
+}
 for (const c of cues) {
-  let chunk = [];
-  const flush = last => {
-    if (!chunk.length) return;
-    subs.push({ who: c.who, t0: chunk[0].s - 0.03, t1: chunk.at(-1).e + (last ? 0.42 : 0.32), text: chunk.map(w => (/^[A-ZÁÉÍÓÚÑÜ]{2,}[.,!?…]*$/.test(w.w) ? w.w.toLowerCase() : w.w)).join(' ') });
-    chunk = [];
-  };
+  let chunk = [], groups = [];
+  const flush = () => { if (chunk.length) groups.push(chunk); chunk = []; };
   const short = c.words.map(x => x.w).join(' ').length <= 28; // frase corta (ej. «Esta vez no.»): una sola placa aunque haya pausa
-  c.words.forEach((w, i) => {
+  c.words.forEach(w => {
     const prev = chunk.at(-1), len = chunk.map(x => x.w).join(' ').length;
     if (prev && !short) {
       const gap = w.s - prev.e;
-      if ((/[.?!…]$/.test(prev.w) && gap > 0.3) || gap > 0.5 || len + w.w.length + 1 > 50) flush(false);
+      // corta en fin de frase (también si la placa ya es larga), en coma si pasa de 34 caracteres, en pausas y por largo
+      if ((/[.?!…]$/.test(prev.w) && (gap > 0.3 || len > 24)) || (/[,:;]$/.test(prev.w) && len > 34) || gap > 0.5 || len + w.w.length + 1 > MAXC) flush();
     }
     chunk.push(w);
-    if (i === c.words.length - 1) flush(true);
+  });
+  flush();
+  rebalancear(groups).forEach((g, gi, all) => {
+    const last = gi === all.length - 1;
+    subs.push({ who: c.who, t0: g[0].s - 0.03, t1: g.at(-1).e + (last ? 0.42 : 0.32), text: g.map(w => (/^[A-ZÁÉÍÓÚÑÜ]{2,}[.,!?…]*$/.test(w.w) ? w.w.toLowerCase() : w.w)).join(' ') });
   });
 }
 subs[0].t0 = 0;
