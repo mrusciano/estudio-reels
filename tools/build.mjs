@@ -92,7 +92,8 @@ function rebalancear(groups) {
   for (let pasada = 0; pasada < 4; pasada++) { let cambio = false; // arreglar una huérfana puede crear otra antes ("Buenos / Aires.")
   for (let i = 1; i < groups.length; i++) {
     const A = groups[i - 1], B = groups[i];
-    if (/[.?!…]$/.test(A.at(-1).w) || !(txt(B).length <= 16 || B.length <= 2)) continue;
+    // también si la placa termina en una palabra débil ("…gente para su / viña.")
+    if (/[.?!…]$/.test(A.at(-1).w) || !(txt(B).length <= 16 || B.length <= 2 || DEBIL.test(A.at(-1).w.replace(/[¿¡,;:]/g, '')))) continue;
     const W = [...A, ...B]; let best = null;
     for (let k = 1; k < W.length; k++) {
       const a = W.slice(0, k), b = W.slice(k), la = txt(a).length, lb = txt(b).length;
